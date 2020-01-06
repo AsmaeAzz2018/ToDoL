@@ -11,9 +11,14 @@ import UIKit
 class TableViewController: UITableViewController{
 
     var itemArray = ["Find Keys" , "Broke Heart" , "Destroy Head"]
+    let defaults = UserDefaults.standard
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        if let items = defaults.array(forKey: "ToDoList")as? [String] {
+            itemArray = items
+        }
        
     }
 
@@ -49,6 +54,7 @@ class TableViewController: UITableViewController{
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
            // print(textField.text!)
             self.itemArray.append(textField.text!)
+            self.defaults.set(self.itemArray, forKey: "ToDoList")
             self.tableView.reloadData()
         }
         
