@@ -8,8 +8,11 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
-class TableViewController: UITableViewController{
+class TableViewController: SwipeTableViewController{
+    
+    @IBOutlet weak var searchBar: UISearchBar!
     let realm = try! Realm()
     var ToDoItems : Results<Item>?
     var selectedCategory : Category? {
@@ -21,18 +24,44 @@ class TableViewController: UITableViewController{
     override func viewDidLoad() {
         super.viewDidLoad()
         
-       print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
+     //  print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
    //     loadItems()
+        tableView.separatorStyle = .none
+    
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        title = selectedCategory?.name
+        guard let colourHex = selectedCategory?.colour else {fatalError()}
+        updateNavBar(withHexCode: colourHex)
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+         updateNavBar(withHexCode: "1D9BF6")
+    }
+    
+    //Mark: - update Nav Bar
+    
+    func updateNavBar(withHexCode colourHexCode: String){
+        guard let navBar = navigationController?.navigationBar else {fatalError("Navigation controller does not exist.")}
+        guard let navBarColour = UIColor(hexString: colourHexCode) else {fatalError()}
+        navBar.barTintColor = navBarColour
+        navBar.tintColor = ContrastColorOf(navBarColour, returnFlat: true)
+        navBar.largeTitleTextAttributes = [NSAttributedString.Key.foregroundColor: ContrastColorOf(navBarColour, returnFlat: true)]
+        searchBar.barTintColor = navBarColour
         
-
-       
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         if  let item = ToDoItems?[indexPath.row] {
         
         cell.textLabel?.text = item.title
+            
+            if let colour = UIColor(hexString: selectedCategory!.colour)?.darken(byPercentage: CGFloat(indexPath.row) / CGFloat(ToDoItems!.count)){
+                cell.backgroundColor = colour
+                cell.textLabel?.textColor = ContrastColorOf(colour, returnFlat: true)
+            }
         
         cell.accessoryType = item.done ? .checkmark : .none
         } else {
@@ -48,15 +77,15 @@ class TableViewController: UITableViewController{
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
        
         if let item = ToDoItems?[indexPath.row] {
-             do {
-                try realm.write {
-                    realm.delete(item)
-                //item.done = !item.done
-                }
-               
-            } catch {
-                print("error saving done status, \(error)")
-            }
+//             do {
+//                try realm.write {
+//                    realm.delete(item)
+//                //item.done = !item.done
+//                }
+//               
+//            } catch {
+//                print("error saving done status, \(error)")
+//            }
         }
        tableView.reloadData()
        tableView.deselectRow(at: indexPath, animated: true)
@@ -94,6 +123,18 @@ class TableViewController: UITableViewController{
         present(alert, animated: true, completion: nil)
     }
     
+    override func updateModel(at indexPath: IndexPath) {
+        
+        if let itemDeleted = self.ToDoItems?[indexPath.row] {
+            do{
+                try self.realm.write {
+                    self.realm.delete(itemDeleted)
+                }
+            }catch {
+                print("error deleting item \(error)")
+            }
+        }
+    }
 
     
     func loadItems(){
@@ -101,6 +142,10 @@ class TableViewController: UITableViewController{
 
         tableView.reloadData()
    }
+    
+   
+    
+    
 }
 //MARK: -search bar methods
 
